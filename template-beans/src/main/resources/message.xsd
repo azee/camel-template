@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:beans.template.mycompany.com"
+           targetNamespace="urn:beans.template.mycompany.com"
+           elementFormDefault="qualified"
+           xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+           jaxb:version="2.1">
+
+    <xs:include schemaLocation="competitor.xsd"/>
+
+
+    <xs:element name="message" type="Message"/>
+    <xs:complexType name="Message" abstract="true" />
+
+    <!-- Start a Poll -->
+    <xs:element name="startPollMessage" type="StartPollMessage"/>
+    <xs:complexType name="StartPollMessage">
+        <xs:complexContent>
+            <xs:extension base="Message" >
+                <xs:sequence>
+                    <xs:element name="pollId" type="xs:string"/>
+                    <xs:element name="competitor" type="Competitor"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!-- Stop a Poll -->
+    <xs:element name="stopPollMessage" type="StopPollMessage"/>
+    <xs:complexType name="StopPollMessage">
+        <xs:complexContent>
+            <xs:extension base="Message" >
+                <xs:sequence>
+                    <xs:element name="pollId" type="xs:string"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!-- Vote message-->
+    <xs:element name="voteMessage" type="VoteMessage"/>
+    <xs:complexType name="VoteMessage">
+        <xs:complexContent>
+            <xs:extension base="Message" >
+                <xs:sequence>
+                    <xs:element name="competitorId" type="xs:string"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+
+</xs:schema>

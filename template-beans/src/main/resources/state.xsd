@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:beans.template.mycompany.com"
+           targetNamespace="urn:beans.template.mycompany.com"
+           elementFormDefault="qualified"
+           xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+           jaxb:version="2.1">
+
+    <xs:include schemaLocation="competitor.xsd"/>
+
+    <xs:element name="state" type="State"/>
+    <xs:complexType name="State" abstract="true" />
+
+    <xs:element name="undefinedState" type="UndefinedState"/>
+    <xs:complexType name="UndefinedState">
+        <xs:complexContent>
+            <xs:extension base="State" />
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="pollRunningState" type="PollRunningState"/>
+    <xs:complexType name="PollRunningState">
+        <xs:complexContent>
+            <xs:extension base="State">
+                <xs:sequence>
+                    <xs:element name="competitor" type="Competitor" minOccurs="0"
+                                maxOccurs="unbounded"/>
+                    <xs:element name="votes" type="xs:long"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+</xs:schema>
