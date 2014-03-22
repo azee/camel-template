@@ -10,7 +10,7 @@
     <artifactId>template-rest</artifactId>
 
     <name>Camel Template REST Services</name>
-    <packaging>jar</packaging>
+    <packaging>war</packaging>
     <description>REST-full endpoints of Template services</description>
 
     <dependencies>
