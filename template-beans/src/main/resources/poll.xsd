@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:beans.template.mycompany.com"
+           targetNamespace="urn:beans.template.mycompany.com"
+           elementFormDefault="qualified"
+           xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+           jaxb:version="2.1">
+
+    <xs:include schemaLocation="competitor.xsd"/>
+
+    <xs:element name="poll" type="Poll"/>
+    <xs:complexType name="Poll">
+        <xs:sequence>
+            <xs:element name="pollId" type="xs:string"/>
+            <xs:element name="competitor" type="Competitor" minOccurs="0"
+                        maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

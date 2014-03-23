@@ -1,14 +1,14 @@
 package com.mycompany.template.api;
 
-import com.mycompany.template.services.SomeBeanService;
-import com.mycompany.template.beans.Pager;
-import com.mycompany.template.beans.SomeBean;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mycompany.template.beans.Vote;
+import com.mycompany.template.beans.VoteMessage;
+import org.apache.camel.Produce;
+import org.apache.camel.ProducerTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.util.List;
+import javax.ws.rs.core.Response;
 
 /**
  * Created by IntelliJ IDEA.
@@ -20,12 +20,17 @@ import java.util.List;
 @Path("/vote")
 public class VoteService {
 
+    @Produce(uri = "direct:vote")
+    private ProducerTemplate voteQueue;
+
     @POST
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Path("/")
     public Response pushVote(Vote vote) throws Exception {
-        //ToDo: push into a queue
+        VoteMessage voteMessage = new VoteMessage();
+        voteMessage.setCompetitorId(vote.getCompetitorId());
+        voteQueue.sendBody(voteMessage);
         return Response.ok().build();
     }
 

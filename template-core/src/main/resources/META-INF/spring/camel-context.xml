@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+            http://camel.apache.org/schema/spring
+            http://camel.apache.org/schema/spring/camel-spring.xsd
+            http://www.springframework.org/schema/context
+            http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+    <bean id="configurationProperties" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+        <property name="ignoreUnresolvablePlaceholders" value="true"/>
+        <property name="ignoreResourceNotFound" value="true"/>
+        <property name="locations">
+            <list merge="true">
+                <value>classpath:default.properties</value>
+                <value>classpath:yard.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <import resource="classpath*:database-context.xml"/>
+    <import resource="classpath*:hazelcast-context.xml"/>
+    <context:component-scan base-package="ru.yandex.qatools.yard"/>
+
+    <!-- JMS -->
+    <bean id="jmsConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+        <property name="brokerURL" value="failover:${yard.jms.broker.list}"/>
+    </bean>
+
+    <bean id="pooledConnectionFactory" class="org.apache.activemq.pool.PooledConnectionFactory">
+        <property name="timeBetweenExpirationCheckMillis" value="0"/>
+        <property name="maxConnections" value="8"/>
+        <property name="idleTimeout" value="0"/>
+        <property name="connectionFactory" ref="jmsConnectionFactory"/>
+    </bean>
+
+    <bean id="jmsConfig" class="org.apache.camel.component.jms.JmsConfiguration">
+        <property name="connectionFactory" ref="pooledConnectionFactory"/>
+        <property name="transacted" value="false"/>
+    </bean>
+
+    <bean id="activemq" class="org.apache.activemq.camel.component.ActiveMQComponent">
+        <property name="configuration" ref="jmsConfig"/>
+    </bean>
+
+    <!-- Aggregators config -->
+    <bean id="hazelcastAggregatorRepository"
+          class="ru.yandex.clay.hazelcast.HazelcastAggregatorRepository" abstract="true">
+        <property name="hazelcastInstance" ref="hazelcastInstance"/>
+    </bean>
+
+    <bean id="startFinishRepo" parent="hazelcastAggregatorRepository">
+        <property name="repository" value="startFinishRepo"/>
+    </bean>
+
+
+    <camelContext xmlns="http://camel.apache.org/schema/spring">
+        <jmxAgent id="jmx" disabled="true"/>
+        <threadPoolProfile id="defaultProfile" defaultProfile="true" maxPoolSize="64"/>
+
+        <!-- Events Queues -->
+        <endpoint id="event.default"
+                  uri="activemq:queue:event.default?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+        <endpoint id="event.aqua"
+                  uri="activemq:queue:event.aqua?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+
+        <!-- Commit queues -->
+        <endpoint id="event.commit"
+                  uri="activemq:queue:event.commit?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+        <endpoint id="event.commit.github"
+                  uri="activemq:queue:event.commit.github?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+        <endpoint id="event.commit.github.byproject"
+                  uri="activemq:queue:event.commit.github.byproject?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+
+
+        <!-- Build queues -->
+        <endpoint id="event.build"
+                  uri="activemq:queue:event.build?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+        <endpoint id="event.build.jenkins"
+                  uri="activemq:queue:event.build.jenkins?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+        <endpoint id="event.build.teamcity"
+                  uri="activemq:queue:event.build.teamcity?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+
+        <!-- Deploy queues -->
+        <endpoint id="event.deploy"
+                  uri="activemq:queue:event.deploy?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+
+        <!-- Save queues -->
+        <endpoint id="event.save"
+                  uri="activemq:queue:event.save?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+        <endpoint id="save.confirm"
+                  uri="activemq:queue:save.confirm?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+
+        <!-- Aggregation queues -->
+        <endpoint id="event.startfinish.aggregate"
+                  uri="activemq:queue:event.startfinish.aggregate?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+
+        <!-- Processing Default Events Messges -->
+        <route>
+            <from uri="ref:event.default"/>
+            <process ref="defaultMessageProcessor"/>
+            <to uri="event.save"/>
+        </route>
+
+        <!-- Processing Commit Events Messges -->
+        <route>
+            <from uri="ref:event.commit"/>
+            <process ref="commitMessageProcessor"/>
+            <to uri="event.save"/>
+        </route>
+
+        <!-- Processing Github commit Events Messges -->
+        <route>
+            <from uri="ref:event.commit.github"/>
+            <split>
+                <method bean="eventsByProjectSplitter" method="split"/>
+                <to uri="event.commit.github.byproject"/>
+            </split>
+        </route>
+        <route>
+            <from uri="ref:event.commit.github.byproject"/>
+            <split>
+                <method bean="githubCommitMessageProcessor" method="commits"/>
+                <to uri="event.save"/>
+            </split>
+        </route>
+
+        <!-- Processing Jenkins Events Messges -->
+        <route>
+            <from uri="ref:event.build.jenkins"/>
+            <split>
+                <method bean="eventsByProjectSplitter" method="split"/>
+                <process ref="jenkinsBuildMessageProcessor"/>
+                <to uri="event.startfinish.aggregate"/>
+            </split>
+        </route>
+
+        <!-- Processing Teamcity Events Messges -->
+        <route>
+            <from uri="ref:event.build.teamcity"/>
+            <split>
+                <method bean="eventsByProjectSplitter" method="split"/>
+                <process ref="teamcityBuildMessageProcessor"/>
+                <to uri="event.startfinish.aggregate"/>
+            </split>
+        </route>
+
+        <!-- Processing Aqua Events Messges -->
+        <route>
+            <from uri="ref:event.aqua"/>
+            <split>
+                <method bean="eventsByProjectSplitter" method="split"/>
+                <process ref="aquaMessageProcessor"/>
+                <to uri="event.startfinish.aggregate"/>
+            </split>
+        </route>
+
+        <!-- Start-Finish lifecycle aggregator -->
+        <route id="startFinishLifecycle">
+            <from uri="ref:event.startfinish.aggregate"/>
+            <log message="Updating event: ${body.key}" loggingLevel="INFO"/>
+            <aggregate strategyRef="startFinishFSM" aggregationRepositoryRef="startFinishRepo">
+                <correlationExpression>
+                    <simple>${body.key}</simple>
+                </correlationExpression>
+                <completionPredicate>
+                    <method bean="startFinishFSM" method="isCompleted"/>
+                </completionPredicate>
+                <stop/>
+            </aggregate>
+        </route>
+
+        <!-- Processing Build Events Messges -->
+        <route>
+            <from uri="ref:event.build"/>
+            <process ref="buildMessageProcessor"/>
+            <to uri="event.save"/>
+        </route>
+
+        <!-- Processing Deploy Events Messges -->
+        <route>
+            <from uri="ref:event.deploy"/>
+            <process ref="deployMessageProcessor"/>
+            <to uri="event.save"/>
+        </route>
+
+
+        <!-- Common saving processor -->
+        <route>
+            <from uri="ref:event.save"/>
+            <process ref="saveEventProcessor"/>
+            <to uri="save.confirm"/>
+        </route>
+
+        <!-- Conformation processor cleans up a queue. Queue is used to delay tests to verify DB persistence-->
+        <route>
+            <from uri="ref:save.confirm"/>
+            <process ref="saveConfirm"/>
+            <stop/>
+        </route>
+
+    </camelContext>
+
+    <!-- Processors -->
+    <!-- Events convertors -->
+    <bean id="defaultMessageProcessor" class="ru.yandex.qatools.yard.camel.DefaultMessageProcessor"/>
+
+    <bean id="commitMessageProcessor" class="ru.yandex.qatools.yard.camel.CommitMessageProcessor"/>
+    <bean id="githubCommitMessageProcessor" class="ru.yandex.qatools.yard.camel.GithubCommitMessageProcessor"/>
+
+    <bean id="buildMessageProcessor" class="ru.yandex.qatools.yard.camel.BuildMessageProcessor"/>
+    <bean id="deployMessageProcessor" class="ru.yandex.qatools.yard.camel.DeployMessageProcessor"/>
+
+    <bean id="jenkinsBuildMessageProcessor" class="ru.yandex.qatools.yard.camel.JenkinsMessageProcessor"/>
+    <bean id="teamcityBuildMessageProcessor" class="ru.yandex.qatools.yard.camel.TeamcityMessageProcessor"/>
+
+    <bean id="aquaMessageProcessor" class="ru.yandex.qatools.yard.camel.AquaMessageProcessor"/>
+
+    <bean id="eventsByProjectSplitter" class="ru.yandex.qatools.yard.camel.splitters.EventsByProjectSplitter"/>
+
+    <!-- Save processors -->
+    <bean id="saveEventProcessor" class="ru.yandex.qatools.yard.camel.SaveEventProcessor"/>
+    <bean id="saveConfirm" class="ru.yandex.qatools.yard.camel.SaveConfirmProcessor"/>
+
+    <!-- Aggregators -->
+    <bean id="startFinishFSM" class="ru.yandex.qatools.clay.core.FSMAggregationStrategy">
+        <constructor-arg value="ru.yandex.qatools.yard.camel.fsm.StartFinishEventAggregator"/>
+    </bean>
+</beans>

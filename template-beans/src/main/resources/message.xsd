@@ -6,8 +6,7 @@
            xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
            jaxb:version="2.1">
 
-    <xs:include schemaLocation="competitor.xsd"/>
-
+    <xs:include schemaLocation="poll.xsd"/>
 
     <xs:element name="message" type="Message"/>
     <xs:complexType name="Message" abstract="true" />
@@ -18,8 +17,7 @@
         <xs:complexContent>
             <xs:extension base="Message" >
                 <xs:sequence>
-                    <xs:element name="pollId" type="xs:string"/>
-                    <xs:element name="competitor" type="Competitor"/>
+                    <xs:element name="poll" type="Poll"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
