@@ -16,18 +16,17 @@
         <property name="locations">
             <list merge="true">
                 <value>classpath:default.properties</value>
-                <value>classpath:yard.properties</value>
+                <value>classpath:stored.properties</value>
             </list>
         </property>
     </bean>
 
-    <import resource="classpath*:database-context.xml"/>
     <import resource="classpath*:hazelcast-context.xml"/>
-    <context:component-scan base-package="ru.yandex.qatools.yard"/>
+    <context:component-scan base-package="com.mycompany.template"/>
 
     <!-- JMS -->
     <bean id="jmsConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
-        <property name="brokerURL" value="failover:${yard.jms.broker.list}"/>
+        <property name="brokerURL" value="failover:${jms.broker.list}"/>
     </bean>
 
     <bean id="pooledConnectionFactory" class="org.apache.activemq.pool.PooledConnectionFactory">
@@ -48,12 +47,12 @@
 
     <!-- Aggregators config -->
     <bean id="hazelcastAggregatorRepository"
-          class="ru.yandex.clay.hazelcast.HazelcastAggregatorRepository" abstract="true">
+          class="com.mycompany.template.repository.HazelcastAggregatorRepository" abstract="true">
         <property name="hazelcastInstance" ref="hazelcastInstance"/>
     </bean>
 
-    <bean id="startFinishRepo" parent="hazelcastAggregatorRepository">
-        <property name="repository" value="startFinishRepo"/>
+    <bean id="pollRepo" parent="hazelcastAggregatorRepository">
+        <property name="repository" value="pollRepo"/>
     </bean>
 
 
@@ -61,172 +60,51 @@
         <jmxAgent id="jmx" disabled="true"/>
         <threadPoolProfile id="defaultProfile" defaultProfile="true" maxPoolSize="64"/>
 
-        <!-- Events Queues -->
-        <endpoint id="event.default"
-                  uri="activemq:queue:event.default?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-        <endpoint id="event.aqua"
-                  uri="activemq:queue:event.aqua?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+        <!-- Queues -->
+        <endpoint id="poll" uri="activemq:queue:poll?concurrentConsumers=${camel.activemq.consumers}"/>
+        <endpoint id="poll.aggregate" uri="activemq:queue:poll.aggregate?concurrentConsumers=${camel.activemq.consumers}"/>
 
-        <!-- Commit queues -->
-        <endpoint id="event.commit"
-                  uri="activemq:queue:event.commit?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-        <endpoint id="event.commit.github"
-                  uri="activemq:queue:event.commit.github?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-        <endpoint id="event.commit.github.byproject"
-                  uri="activemq:queue:event.commit.github.byproject?concurrentConsumers=${yard.camel.activemq.consumers}"/>
+        <endpoint id="vote" uri="activemq:queue:vote?concurrentConsumers=${camel.activemq.consumers}"/>
 
-
-        <!-- Build queues -->
-        <endpoint id="event.build"
-                  uri="activemq:queue:event.build?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-        <endpoint id="event.build.jenkins"
-                  uri="activemq:queue:event.build.jenkins?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-        <endpoint id="event.build.teamcity"
-                  uri="activemq:queue:event.build.teamcity?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-
-        <!-- Deploy queues -->
-        <endpoint id="event.deploy"
-                  uri="activemq:queue:event.deploy?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-
-        <!-- Save queues -->
-        <endpoint id="event.save"
-                  uri="activemq:queue:event.save?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-        <endpoint id="save.confirm"
-                  uri="activemq:queue:save.confirm?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-
-        <!-- Aggregation queues -->
-        <endpoint id="event.startfinish.aggregate"
-                  uri="activemq:queue:event.startfinish.aggregate?concurrentConsumers=${yard.camel.activemq.consumers}"/>
-
-        <!-- Processing Default Events Messges -->
+        <!-- Processing Poll Messges -->
         <route>
-            <from uri="ref:event.default"/>
-            <process ref="defaultMessageProcessor"/>
-            <to uri="event.save"/>
-        </route>
-
-        <!-- Processing Commit Events Messges -->
-        <route>
-            <from uri="ref:event.commit"/>
-            <process ref="commitMessageProcessor"/>
-            <to uri="event.save"/>
-        </route>
-
-        <!-- Processing Github commit Events Messges -->
-        <route>
-            <from uri="ref:event.commit.github"/>
+            <from uri="ref:poll"/>
+            <process ref=""/>
             <split>
-                <method bean="eventsByProjectSplitter" method="split"/>
-                <to uri="event.commit.github.byproject"/>
-            </split>
-        </route>
-        <route>
-            <from uri="ref:event.commit.github.byproject"/>
-            <split>
-                <method bean="githubCommitMessageProcessor" method="commits"/>
-                <to uri="event.save"/>
+                <method bean="pollSplitter" method="split"/>
+                <to uri="poll.aggregate"/>
             </split>
         </route>
 
-        <!-- Processing Jenkins Events Messges -->
+        <!-- Processing Vote Messges -->
         <route>
-            <from uri="ref:event.build.jenkins"/>
-            <split>
-                <method bean="eventsByProjectSplitter" method="split"/>
-                <process ref="jenkinsBuildMessageProcessor"/>
-                <to uri="event.startfinish.aggregate"/>
-            </split>
+            <from uri="ref:vote"/>
+            <process ref="voteProcessor"/>
+            <to uri="poll.aggregate"/>
         </route>
 
-        <!-- Processing Teamcity Events Messges -->
-        <route>
-            <from uri="ref:event.build.teamcity"/>
-            <split>
-                <method bean="eventsByProjectSplitter" method="split"/>
-                <process ref="teamcityBuildMessageProcessor"/>
-                <to uri="event.startfinish.aggregate"/>
-            </split>
-        </route>
-
-        <!-- Processing Aqua Events Messges -->
-        <route>
-            <from uri="ref:event.aqua"/>
-            <split>
-                <method bean="eventsByProjectSplitter" method="split"/>
-                <process ref="aquaMessageProcessor"/>
-                <to uri="event.startfinish.aggregate"/>
-            </split>
-        </route>
-
-        <!-- Start-Finish lifecycle aggregator -->
-        <route id="startFinishLifecycle">
-            <from uri="ref:event.startfinish.aggregate"/>
-            <log message="Updating event: ${body.key}" loggingLevel="INFO"/>
-            <aggregate strategyRef="startFinishFSM" aggregationRepositoryRef="startFinishRepo">
+        <!-- Poll lifecycle aggregator -->
+        <route id="pollLifecycle">
+            <from uri="ref:poll.aggregate"/>
+            <log message="Updating poll state: ${body.pollId}" loggingLevel="INFO"/>
+            <aggregate strategyRef="pollFSM" aggregationRepositoryRef="pollRepo">
                 <correlationExpression>
-                    <simple>${body.key}</simple>
+                    <simple>${body.pollId}</simple>
                 </correlationExpression>
                 <completionPredicate>
-                    <method bean="startFinishFSM" method="isCompleted"/>
+                    <method bean="pollFSM" method="isCompleted"/>
                 </completionPredicate>
                 <stop/>
             </aggregate>
         </route>
 
-        <!-- Processing Build Events Messges -->
-        <route>
-            <from uri="ref:event.build"/>
-            <process ref="buildMessageProcessor"/>
-            <to uri="event.save"/>
-        </route>
-
-        <!-- Processing Deploy Events Messges -->
-        <route>
-            <from uri="ref:event.deploy"/>
-            <process ref="deployMessageProcessor"/>
-            <to uri="event.save"/>
-        </route>
-
-
-        <!-- Common saving processor -->
-        <route>
-            <from uri="ref:event.save"/>
-            <process ref="saveEventProcessor"/>
-            <to uri="save.confirm"/>
-        </route>
-
-        <!-- Conformation processor cleans up a queue. Queue is used to delay tests to verify DB persistence-->
-        <route>
-            <from uri="ref:save.confirm"/>
-            <process ref="saveConfirm"/>
-            <stop/>
-        </route>
-
     </camelContext>
 
     <!-- Processors -->
-    <!-- Events convertors -->
-    <bean id="defaultMessageProcessor" class="ru.yandex.qatools.yard.camel.DefaultMessageProcessor"/>
+    <bean id="pollSplitter" class="com.mycompany.template.splitters.PollSplitter"/>
 
-    <bean id="commitMessageProcessor" class="ru.yandex.qatools.yard.camel.CommitMessageProcessor"/>
-    <bean id="githubCommitMessageProcessor" class="ru.yandex.qatools.yard.camel.GithubCommitMessageProcessor"/>
-
-    <bean id="buildMessageProcessor" class="ru.yandex.qatools.yard.camel.BuildMessageProcessor"/>
-    <bean id="deployMessageProcessor" class="ru.yandex.qatools.yard.camel.DeployMessageProcessor"/>
-
-    <bean id="jenkinsBuildMessageProcessor" class="ru.yandex.qatools.yard.camel.JenkinsMessageProcessor"/>
-    <bean id="teamcityBuildMessageProcessor" class="ru.yandex.qatools.yard.camel.TeamcityMessageProcessor"/>
-
-    <bean id="aquaMessageProcessor" class="ru.yandex.qatools.yard.camel.AquaMessageProcessor"/>
-
-    <bean id="eventsByProjectSplitter" class="ru.yandex.qatools.yard.camel.splitters.EventsByProjectSplitter"/>
-
-    <!-- Save processors -->
-    <bean id="saveEventProcessor" class="ru.yandex.qatools.yard.camel.SaveEventProcessor"/>
-    <bean id="saveConfirm" class="ru.yandex.qatools.yard.camel.SaveConfirmProcessor"/>
+    <bean id="voteProcessor" class="com.mycompany.template.processors.VoteProcessor"/>
 
     <!-- Aggregators -->
-    <bean id="startFinishFSM" class="ru.yandex.qatools.clay.core.FSMAggregationStrategy">
-        <constructor-arg value="ru.yandex.qatools.yard.camel.fsm.StartFinishEventAggregator"/>
-    </bean>
+    <bean id="pollFSM" class="com.mycompany.template.PollAggregationStrategy" />
 </beans>

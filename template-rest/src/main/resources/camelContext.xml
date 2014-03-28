@@ -8,7 +8,7 @@
 
     <!-- JMS -->
     <bean id="jmsConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
-        <property name="brokerURL" value="failover:${yard.jms.broker.list}"/>
+        <property name="brokerURL" value="failover:${jms.broker.list}"/>
     </bean>
 
     <bean id="pooledConnectionFactory" class="org.apache.activemq.pool.PooledConnectionFactory">
