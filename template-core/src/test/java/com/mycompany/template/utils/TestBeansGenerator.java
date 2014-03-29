@@ -2,6 +2,7 @@ package com.mycompany.template.utils;
 
 import com.mycompany.template.beans.Competitor;
 import com.mycompany.template.beans.Poll;
+import com.mycompany.template.beans.StopPollMessage;
 import com.mycompany.template.beans.Vote;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +35,12 @@ public class TestBeansGenerator {
         vote.setCompetitorId(competitorId);
         vote.setPollId(pollId);
         return vote;
+    }
+
+    public StopPollMessage getStopPollMessage(String pollId){
+        StopPollMessage message = new StopPollMessage();
+        message.setPollId(pollId);
+        return message;
     }
 
 }

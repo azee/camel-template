@@ -66,6 +66,8 @@
 
         <endpoint id="vote" uri="activemq:queue:vote?concurrentConsumers=${camel.activemq.consumers}"/>
 
+        <endpoint id="done" uri="activemq:queue:done?concurrentConsumers=${camel.activemq.consumers}"/>
+
         <!-- Processing Poll Messges -->
         <route>
             <from uri="ref:poll"/>
@@ -93,17 +95,26 @@
                 <completionPredicate>
                     <method bean="pollFSM" method="isCompleted"/>
                 </completionPredicate>
-                <stop/>
+                <to uri="done"/>
             </aggregate>
+        </route>
+
+        <!-- Conformation processor cleans up a queue. Queue is used to delay tests -->
+        <route>
+            <from uri="ref:done"/>
+            <process ref="doneProcessor"/>
+            <stop/>
         </route>
 
     </camelContext>
 
-    <!-- Processors -->
+    <!-- Splitters -->
     <bean id="pollSplitter" class="com.mycompany.template.splitters.PollSplitter"/>
 
+    <!-- Processors -->
     <bean id="voteProcessor" class="com.mycompany.template.processors.VoteProcessor"/>
+    <bean id="doneProcessor" class="com.mycompany.template.processors.DoneProcessor"/>
 
     <!-- Aggregators -->
-    <bean id="pollFSM" class="com.mycompany.template.PollAggregationStrategy" />
+    <bean id="pollFSM" class="com.mycompany.template.aggregators.PollAggregationStrategy" />
 </beans>

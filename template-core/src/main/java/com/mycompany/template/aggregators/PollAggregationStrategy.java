@@ -1,7 +1,8 @@
-package com.mycompany.template;
+package com.mycompany.template.aggregators;
 
 import com.mycompany.template.beans.Competitor;
 import com.mycompany.template.beans.Poll;
+import com.mycompany.template.beans.StopPollMessage;
 import com.mycompany.template.beans.Vote;
 import org.apache.camel.Exchange;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
@@ -10,6 +11,8 @@ import org.apache.camel.processor.aggregate.AggregationStrategy;
  * Created by azee on 3/29/14.
  */
 public class PollAggregationStrategy implements AggregationStrategy {
+
+    private boolean isPollFinished;
 
     @Override
     public Exchange aggregate(Exchange oldState, Exchange message) {
@@ -20,7 +23,12 @@ public class PollAggregationStrategy implements AggregationStrategy {
         }
 
         updateVote(oldState, message);
-        oldState.getIn().setBody(oldState);
+
+        if (message.getIn().getBody() instanceof StopPollMessage){
+            isPollFinished = true;
+        }
+
+        //oldState.getIn().setBody(oldState);
         return oldState;
     }
 
@@ -30,7 +38,7 @@ public class PollAggregationStrategy implements AggregationStrategy {
      * @return
      */
     private Exchange initNewState(Exchange message){
-        Object data = message.getIn();
+        Object data = message.getIn().getBody();
         if (data instanceof Poll){
             return message;
         }
@@ -73,7 +81,6 @@ public class PollAggregationStrategy implements AggregationStrategy {
     }
 
     public boolean isCompleted() {
-        //ToDO: implement
-        return false;
+        return isPollFinished;
     }
 }
