@@ -12,11 +12,6 @@
     <name>Camel Template Core</name>
     <packaging>jar</packaging>
 
-    <properties>
-        <embedded.mongo.host>127.0.0.1</embedded.mongo.host>
-        <embedded.mongo.port>27018</embedded.mongo.port>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.mycompany.template</groupId>
@@ -76,12 +71,6 @@
             <groupId>ru.yandex.qatools</groupId>
             <artifactId>yatomata</artifactId>
             <version>1.5</version>
-        </dependency>
-
-        <!--Mongo Driver-->
-        <dependency>
-            <groupId>org.mongodb</groupId>
-            <artifactId>mongo-java-driver</artifactId>
         </dependency>
 
         <!--Spring-->
