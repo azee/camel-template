@@ -51,3 +51,6 @@ java -cp "/usr/share/PATH_TO_TEMPLATE/lib/*" -Xmx8192m -Xloggc:/var/log/PATH_TO_
 
 Also Camel context can be included into the REST Web context. In that case REST and Camel components will work on the same server in the common context.F
 
+Jenkins Build
+==============
+http://azee.people.yandex.net/job/template-camel/
