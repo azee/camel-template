@@ -1,5 +1,5 @@
 package com.mycompany.template.processors;
-;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 
@@ -10,5 +10,7 @@ import org.apache.camel.Processor;
 public class DoneProcessor implements Processor {
 
     @Override
-    public void process(Exchange exchange) {}
+    public void process(Exchange exchange) {
+        // As an example - a Poll can be saved here
+    }
 }
