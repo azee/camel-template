@@ -55,6 +55,9 @@ public class PollTest {
     @Produce(uri = "activemq:queue:poll.aggregate")
     protected ProducerTemplate pollAggregateQueue;
 
+    @Produce(uri = "activemq:queue:vote")
+    protected ProducerTemplate voteQueue;
+
     @Before
     public void before() {
         pollAggregate.reset();
@@ -83,37 +86,70 @@ public class PollTest {
 
     @DirtiesContext
     @Test
-    public void pollWorkflowTest() throws InterruptedException {
+    public void stopPollTest() throws InterruptedException {
         String pollId = "Poll2";
         pollQueue.sendBody(testBeansGenerator.getPoll(pollId));
         pollAggregate.setExpectedMessageCount(2);
         pollAggregate.assertIsSatisfied();
 
-
         pollAggregateQueue.sendBody(testBeansGenerator.getStopPollMessage(pollId));
 
+        done.setExpectedMessageCount(1);
+        done.assertIsSatisfied();
+    }
+
+    @DirtiesContext
+    @Test
+    public void pollWorkflowTest() throws InterruptedException {
+        //Create a poll
+        String pollId = "Poll3";
+        pollQueue.sendBody(testBeansGenerator.getPoll(pollId));
+        pollAggregate.setExpectedMessageCount(2);
+        pollAggregate.assertIsSatisfied();
+
+        //Vote
+        voteQueue.sendBody(testBeansGenerator.getVote(pollId, "1"));
+        voteQueue.sendBody(testBeansGenerator.getVote(pollId, "1"));
+        voteQueue.sendBody(testBeansGenerator.getVote(pollId, "1"));
+
+        voteQueue.sendBody(testBeansGenerator.getVote(pollId, "2"));
+        voteQueue.sendBody(testBeansGenerator.getVote(pollId, "2"));
+
+        voteQueue.sendBody(testBeansGenerator.getVote(pollId, "3"));
+
+        pollAggregate.setExpectedMessageCount(8);
+        pollAggregate.assertIsSatisfied();
+
+        //Stop a poll
+        pollAggregateQueue.sendBody(testBeansGenerator.getStopPollMessage(pollId));
 
         done.setExpectedMessageCount(1);
         done.assertIsSatisfied();
 
-//        IMap map = instance.getMap("pollRepo");
-//        assertNotNull(map);
-//
-//        Object state = map.get(pollId);
-//        assertNotNull(state);
-//        assertTrue(state instanceof Exchange);
-//
-//        Object poll = ((Exchange) state).getIn().getBody();
-//        assertNotNull(poll);
-//        assertTrue(poll instanceof Poll);
-//
-//        List<Competitor> competitors = ((Poll) poll).getCompetitors();
-//        assertNotNull(competitors);
-//        Assert.assertThat(competitors.size(), is(3));
-//
-//        assertNotNull(competitors.get(0));
-//        assertNotNull(competitors.get(1));
-//        assertNotNull(competitors.get(2));
+        Exchange doneExchange = done.getExchanges().get(0);
+
+        assertNotNull(doneExchange);
+
+        Object poll = doneExchange.getIn().getBody();
+        assertNotNull(poll);
+        assertTrue(poll instanceof Poll);
+
+        List<Competitor> competitors = ((Poll) poll).getCompetitors();
+        assertNotNull(competitors);
+        Assert.assertThat(competitors.size(), is(3));
+
+        assertNotNull(competitors.get(0));
+        Assert.assertThat(competitors.get(0).getId(), is("1"));
+        Assert.assertThat(competitors.get(0).getVotes(), is(3L));
+
+        assertNotNull(competitors.get(1));
+        Assert.assertThat(competitors.get(1).getId(), is("2"));
+        Assert.assertThat(competitors.get(1).getVotes(), is(2L));
+
+        assertNotNull(competitors.get(2));
+        Assert.assertThat(competitors.get(2).getId(), is("3"));
+        Assert.assertThat(competitors.get(2).getVotes(), is(1L));
+
     }
 
 }

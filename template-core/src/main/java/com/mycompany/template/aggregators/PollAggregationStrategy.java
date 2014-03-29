@@ -52,10 +52,9 @@ public class PollAggregationStrategy implements AggregationStrategy {
      * @return
      */
     private Exchange updateVote(Exchange oldState, Exchange message){
-        Object data = message.getIn();
+        Object data = message.getIn().getBody();
         if (data instanceof Vote){
-            Vote vote = message.getIn().getBody(Vote.class);
-            Poll updatedPoll = updateVote(oldState.getIn().getBody(Poll.class), vote);
+            Poll updatedPoll = updateVote(oldState.getIn().getBody(Poll.class), (Vote) data);
             oldState.getIn().setBody(updatedPoll);
         }
         return oldState;

@@ -16,8 +16,6 @@ public class VoteProcessor implements Processor {
     @Override
     public void process(Exchange exchange) {
         Vote vote = exchange.getIn().getBody(Vote.class);
-
-        //ToDo: update header
         exchange.getIn().setBody(vote);
     }
 }
