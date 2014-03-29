@@ -42,3 +42,12 @@ In the system like this following JMS configuration is preferred: each server ha
 In this case we can leave JMS + Camel processors in one cluster and REST in another.
 We can easily add as much servers as we need to any of them.
 
+Deploy
+==============
+REST component can be deployed to any application server.
+
+Camel component can be started like this:
+java -cp "/usr/share/PATH_TO_TEMPLATE/lib/*" -Xmx8192m -Xloggc:/var/log/PATH_TO_GC_LOG.log -Xbootclasspath/a:/etc/PATH_TO_CONFIG_FILES -jar /usr/share/PATH_TO_TEMPLATE/template-camel.jar > /dev/null 2>&1 &
+
+Also Camel context can be included into the REST Web context. In that case REST and Camel components will work on the same server in the common context.F
+
