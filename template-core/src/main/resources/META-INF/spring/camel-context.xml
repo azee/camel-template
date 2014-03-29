@@ -69,7 +69,6 @@
         <!-- Processing Poll Messges -->
         <route>
             <from uri="ref:poll"/>
-            <process ref=""/>
             <split>
                 <method bean="pollSplitter" method="split"/>
                 <to uri="poll.aggregate"/>
