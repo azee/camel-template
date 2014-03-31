@@ -1,7 +1,7 @@
 camel-template
 ==============
 
-A template for REST + Camle + ActiveMQ srvice
+A template for REST + Camel + ActiveMQ srvice
 
 A simple example how Camel and Hazelcast can be used in distributive systems.
 
