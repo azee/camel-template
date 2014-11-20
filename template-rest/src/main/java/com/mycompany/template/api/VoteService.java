@@ -25,7 +25,7 @@ public class VoteService {
     @POST
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    @Path("/{pollId}/{compartitorId}")
+    @Path("/{pollId}/{competitorId}")
     public Response pushVote(@PathParam("competitorId") String competitorId, @PathParam("pollId") String pollId) throws Exception {
         VoteMessage voteMessage = new VoteMessage();
         voteMessage.setCompetitorId(competitorId);
