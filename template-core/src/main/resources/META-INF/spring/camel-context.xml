@@ -71,6 +71,7 @@
         <!-- Processing Poll Messges -->
         <route>
             <from uri="ref:poll"/>
+            <process ref="pollProcessor"/>
             <split>
                 <method bean="pollSplitter" method="split"/>
                 <to uri="poll.aggregate"/>
@@ -87,10 +88,10 @@
         <!-- Poll lifecycle aggregator -->
         <route id="pollLifecycle">
             <from uri="ref:poll.aggregate"/>
-            <log message="Updating poll state: ${body.pollId}" loggingLevel="INFO"/>
+            <log message="Updating poll state: ${header.pollId}" loggingLevel="INFO"/>
             <aggregate strategyRef="pollFSM" aggregationRepositoryRef="pollRepo">
                 <correlationExpression>
-                    <simple>${body.pollId}</simple>
+                    <simple>${header.pollId}</simple>
                 </correlationExpression>
                 <completionPredicate>
                     <method bean="pollFSM" method="isCompleted"/>
@@ -112,9 +113,14 @@
     <bean id="pollSplitter" class="com.mycompany.template.splitters.PollSplitter"/>
 
     <!-- Processors -->
+    <bean id="pollProcessor" class="com.mycompany.template.processors.PollProcessor"/>
     <bean id="voteProcessor" class="com.mycompany.template.processors.VoteProcessor"/>
     <bean id="doneProcessor" class="com.mycompany.template.processors.DoneProcessor"/>
 
     <!-- Aggregators -->
-    <bean id="pollFSM" class="com.mycompany.template.aggregators.PollAggregationStrategy" />
+    <!--<bean id="pollFSM" class="com.mycompany.template.aggregators.PollAggregationStrategy" />-->
+
+    <bean id="pollFSM" class="ru.yandex.qatools.camelot.core.impl.FSMAggregationStrategy">
+        <constructor-arg value="com.mycompany.template.aggregators.PollFSM"/>
+    </bean>
 </beans>

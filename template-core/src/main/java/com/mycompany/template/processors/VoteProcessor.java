@@ -1,6 +1,7 @@
 package com.mycompany.template.processors;
 
-import com.mycompany.template.beans.Vote;
+import com.mycompany.template.beans.VoteMessage;
+import com.mycompany.template.utils.MessageUtils;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.log4j.LogManager;
@@ -15,7 +16,7 @@ public class VoteProcessor implements Processor {
 
     @Override
     public void process(Exchange exchange) {
-        Vote vote = exchange.getIn().getBody(Vote.class);
-        exchange.getIn().setBody(vote);
+        VoteMessage message = exchange.getIn().getBody(VoteMessage.class);
+        exchange.getIn().setHeaders(MessageUtils.getHeaders(message.getPollId(), VoteMessage.class));
     }
 }

@@ -2,6 +2,7 @@ package com.mycompany.template.processors;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -9,8 +10,10 @@ import org.apache.camel.Processor;
  */
 public class DoneProcessor implements Processor {
 
+    private static final Logger logger = Logger.getLogger(DoneProcessor.class);
+
     @Override
     public void process(Exchange exchange) {
-        // As an example - a Poll can be saved here
+        logger.info("Done: " + exchange.getIn().getBody().getClass());
     }
 }

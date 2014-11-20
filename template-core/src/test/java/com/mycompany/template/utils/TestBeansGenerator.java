@@ -1,9 +1,6 @@
 package com.mycompany.template.utils;
 
-import com.mycompany.template.beans.Competitor;
-import com.mycompany.template.beans.Poll;
-import com.mycompany.template.beans.StopPollMessage;
-import com.mycompany.template.beans.Vote;
+import com.mycompany.template.beans.*;
 import org.springframework.stereotype.Service;
 
 /**
@@ -30,11 +27,11 @@ public class TestBeansGenerator {
         return competitor;
     }
 
-    public Vote getVote(String pollId, String competitorId){
-        Vote vote = new Vote();
-        vote.setCompetitorId(competitorId);
-        vote.setPollId(pollId);
-        return vote;
+    public VoteMessage getVote(String pollId, String competitorId){
+        VoteMessage voteMessage = new VoteMessage();
+        voteMessage.setPollId(pollId);
+        voteMessage.setCompetitorId(competitorId);
+        return voteMessage;
     }
 
     public StopPollMessage getStopPollMessage(String pollId){
@@ -43,4 +40,10 @@ public class TestBeansGenerator {
         return message;
     }
 
+    public StartPollMessage getStartPollMessage(String pollId){
+        StartPollMessage message = new StartPollMessage();
+        message.setPoll(getPoll(pollId));
+        message.setPollId(pollId);
+        return message;
+    }
 }

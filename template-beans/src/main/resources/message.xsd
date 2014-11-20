@@ -8,8 +8,12 @@
 
     <xs:include schemaLocation="poll.xsd"/>
 
-    <xs:element name="message" type="Message"/>
-    <xs:complexType name="Message" abstract="true" />
+    <xs:element name="Message" type="Message"/>
+    <xs:complexType name="Message" abstract="true">
+        <xs:sequence>
+           <xs:element name="pollId" type="xs:string"/>
+        </xs:sequence>
+     </xs:complexType>
 
     <!-- Start a Poll -->
     <xs:element name="startPollMessage" type="StartPollMessage"/>
@@ -27,11 +31,7 @@
     <xs:element name="stopPollMessage" type="StopPollMessage"/>
     <xs:complexType name="StopPollMessage">
         <xs:complexContent>
-            <xs:extension base="Message" >
-                <xs:sequence>
-                    <xs:element name="pollId" type="xs:string"/>
-                </xs:sequence>
-            </xs:extension>
+            <xs:extension base="Message" />
         </xs:complexContent>
     </xs:complexType>
 
