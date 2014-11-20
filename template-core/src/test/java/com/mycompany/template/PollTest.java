@@ -1,9 +1,7 @@
 package com.mycompany.template;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
-import com.mycompany.template.beans.Competitor;
-import com.mycompany.template.beans.Poll;
+import com.mycompany.template.beans.*;
 import com.mycompany.template.utils.TestBeansGenerator;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Exchange;
@@ -71,16 +69,8 @@ public class PollTest {
     @Test
     public void createPollRoutingTest() throws InterruptedException {
         String pollId = "Poll1";
-        pollQueue.sendBody(testBeansGenerator.getPoll(pollId));
+        pollQueue.sendBody(testBeansGenerator.getStartPollMessage(pollId));
         pollAggregate.setExpectedMessageCount(2);
-        pollAggregate.assertIsSatisfied();
-    }
-
-    @DirtiesContext
-    @Test
-    public void ignoreInitialVoteTest() throws InterruptedException {
-        pollQueue.sendBody(testBeansGenerator.getVote("Poll1", "1"));
-        pollAggregate.setExpectedMessageCount(0);
         pollAggregate.assertIsSatisfied();
     }
 
@@ -88,13 +78,13 @@ public class PollTest {
     @Test
     public void stopPollTest() throws InterruptedException {
         String pollId = "Poll2";
-        pollQueue.sendBody(testBeansGenerator.getPoll(pollId));
+        pollQueue.sendBody(testBeansGenerator.getStartPollMessage(pollId));
         pollAggregate.setExpectedMessageCount(2);
         pollAggregate.assertIsSatisfied();
 
-        pollAggregateQueue.sendBody(testBeansGenerator.getStopPollMessage(pollId));
+        pollQueue.sendBody(testBeansGenerator.getStopPollMessage(pollId));
 
-        done.setExpectedMessageCount(1);
+        done.setExpectedMessageCount(2);
         done.assertIsSatisfied();
     }
 
@@ -103,7 +93,8 @@ public class PollTest {
     public void pollWorkflowTest() throws InterruptedException {
         //Create a poll
         String pollId = "Poll3";
-        pollQueue.sendBody(testBeansGenerator.getPoll(pollId));
+        pollQueue.sendBody(testBeansGenerator.getStartPollMessage(pollId));
+
         pollAggregate.setExpectedMessageCount(2);
         pollAggregate.assertIsSatisfied();
 
@@ -121,20 +112,23 @@ public class PollTest {
         pollAggregate.assertIsSatisfied();
 
         //Stop a poll
-        pollAggregateQueue.sendBody(testBeansGenerator.getStopPollMessage(pollId));
+        pollQueue.sendBody(testBeansGenerator.getStopPollMessage(pollId));
 
-        done.setExpectedMessageCount(1);
+        done.setExpectedMessageCount(2);
         done.assertIsSatisfied();
 
         Exchange doneExchange = done.getExchanges().get(0);
 
         assertNotNull(doneExchange);
 
-        Object poll = doneExchange.getIn().getBody();
-        assertNotNull(poll);
-        assertTrue(poll instanceof Poll);
+        Object pollState = doneExchange.getIn().getBody();
+        assertNotNull(pollState);
+        assertTrue(pollState instanceof PollRunningState);
 
-        List<Competitor> competitors = ((Poll) poll).getCompetitors();
+        Poll poll = ((PollRunningState) pollState).getPoll();
+        assertNotNull(poll);
+
+        List<Competitor> competitors = poll.getCompetitors();
         assertNotNull(competitors);
         Assert.assertThat(competitors.size(), is(3));
 

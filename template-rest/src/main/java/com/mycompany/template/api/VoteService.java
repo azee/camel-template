@@ -1,6 +1,5 @@
 package com.mycompany.template.api;
 
-import com.mycompany.template.beans.Vote;
 import com.mycompany.template.beans.VoteMessage;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
@@ -26,10 +25,11 @@ public class VoteService {
     @POST
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    @Path("/")
-    public Response pushVote(Vote vote) throws Exception {
+    @Path("/{pollId}/{compartitorId}")
+    public Response pushVote(@PathParam("competitorId") String competitorId, @PathParam("pollId") String pollId) throws Exception {
         VoteMessage voteMessage = new VoteMessage();
-        voteMessage.setCompetitorId(vote.getCompetitorId());
+        voteMessage.setCompetitorId(competitorId);
+        voteMessage.setPollId(pollId);
         voteQueue.sendBody(voteMessage);
         return Response.ok().build();
     }
