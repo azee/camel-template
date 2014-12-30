@@ -54,4 +54,4 @@ Also Camel context can be included into the REST Web context. In that case REST 
 
 Jenkins Build
 ==============
-http://azee.people.yandex.net/job/template-camel/
+http://azee.people.yandex.net/jenkins/job/template-camel/
