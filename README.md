@@ -1,6 +1,8 @@
 camel-template
 ==============
 
+[![Join the chat at https://gitter.im/azee/camel-template](https://badges.gitter.im/azee/camel-template.svg)](https://gitter.im/azee/camel-template?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 A template for REST + Camel + ActiveMQ srvice
 
 A simple example how Camel and Hazelcast can be used in distributive systems.
